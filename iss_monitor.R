@@ -1,16 +1,17 @@
 # Load libraries
-library(RMySQL)
 library(httr)
 library(jsonlite)
 library(dplyr)
+# Load RPostgres instead of RMySQL
+library(RPostgres)
 
-# Connect to MySQL
-con <- dbConnect(MySQL(), 
-                 user = "root", 
-                 password = "", 
-                 dbname = "iss_telemetry", 
-                 host = "localhost", 
-                 port = 3306)
+# Connect to PostgreSQL using environment variables
+con <- dbConnect(RPostgres::Postgres(),
+                 dbname = Sys.getenv("DB_NAME"),
+                 host = Sys.getenv("DB_HOST"),
+                 port = as.integer(Sys.getenv("DB_PORT")),
+                 user = Sys.getenv("DB_USER"),
+                 password = Sys.getenv("DB_PASSWORD"))
 
 # Initialize variables
 altitude_history <- c()
@@ -114,4 +115,5 @@ repeat {
 }
 
 # Close connection
+
 dbDisconnect(con) 
