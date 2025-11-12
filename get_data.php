@@ -5,6 +5,7 @@ error_reporting(0);
 
 // Connect to MySQL database
 $conn = new mysqli("localhost", "root", "", "iss_telemetry");
+$conn = pg_connect("host=" . getenv('DB_HOST') . " port=" . getenv('DB_PORT') . " dbname=" . getenv('DB_NAME') . " user=" . getenv('DB_USER') . " password=" . getenv('DB_PASSWORD'));
 
 // Check database connection; if failed, respond with HTTP 500 and exit
 if ($conn->connect_error) {
@@ -52,3 +53,4 @@ echo json_encode($response);
 // Close database connection
 $conn->close();
 ?>
+
