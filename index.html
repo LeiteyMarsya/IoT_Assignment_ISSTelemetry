@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ISS Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #map { height: 400px; width: 100%; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; max-height: 300px; overflow-y: auto; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; position: sticky; top: 0; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        #analytics { background-color: #e7f3ff; padding: 10px; border: 1px solid #ccc; margin-bottom: 20px; }
+        #altitudeChart, #velocityChart { height: 400px; width: 48%; display: inline-block; margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <h1>ISS Live Map and Data Dashboard</h1>
+    <div id="analytics">
+        <h2>Analytics Summary</h2>
+        <p><strong>Max Longitude:</strong> <span id="maxLon">-</span></p>
+        <p><strong>Min Longitude:</strong> <span id="minLon">-</span></p>
+        <p><strong>Altitude Change Count:</strong> <span id="altChanges">0</span> (changes > 0.001 km)</p>
+        <p><strong>Total Altitude Change (km):</strong> <span id="altChangeMag">0.00</span></p>
+        <p><em>Note: Values update every 6 hours from stored analytics. Dashboard auto-refreshes every 20 seconds.</em></p>
+    </div>
+    <div id="map"></div>
+    <h2>Telemetry Charts (Last 100 Entries)</h2>
+    <div id="altitudeChart"></div>
+    <div id="velocityChart"></div>
+    <h2>ISS Data Table (Last 1000 Entries)</h2>
+    <table id="dataTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>Altitude (km)</th>
+                <th>Velocity (km/h)</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Rows will be added here by JavaScript -->
+        </tbody>
+    </table>
+    <script>
+        // Initialize the map
+        var map = L.map('map').setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        
+        // Layer groups for markers and polyline
+        var markerLayer = L.layerGroup().addTo(map);
+        var polylineLayer = L.layerGroup().addTo(map);
+        
+        // Function to update dashboard
+        function updateDashboard() {
+            console.log('Starting dashboard update...');  // Debug log
+            fetch('get_data.php')
+                .then(response => {
+                    console.log('Fetch response:', response);  // Check if fetch succeeds
+                    if (!response.ok) throw new Error('Network response was not ok: ' + response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Parsed data:', data);  // Check data structure
+                    if (!data || !data.data) {
+                        console.error('No data received or data.data is empty');
+                        return;
+                    }
+                    
+                    // Clear old map layers and polylines
+                    markerLayer.clearLayers();
+                    polylineLayer.clearLayers();
+
+                    // Update analytics safely
+                    if (data.analytics) {
+                        const maxLon = Number(data.analytics.max_longitude);
+                        const minLon = Number(data.analytics.min_longitude);
+                        const altChangeCount = data.analytics.altitude_changes;
+                        const altChangeMag = data.analytics.altitude_change_magnitude;
+
+                        document.getElementById('maxLon').textContent = !isNaN(maxLon) ? maxLon.toFixed(2) : '-';
+                        document.getElementById('minLon').textContent = !isNaN(minLon) ? minLon.toFixed(2) : '-';
+                        document.getElementById('altChanges').textContent = (typeof altChangeCount === 'number' && !isNaN(altChangeCount)) ? altChangeCount : 0;
+                        document.getElementById('altChangeMag').textContent = (typeof altChangeMag === 'number' && !isNaN(altChangeMag)) ? altChangeMag.toFixed(2) : '0.00';
+                    }
+        
+                    // Add markers and popups to the map
+                    data.data.forEach(point => {
+                        L.marker([point.latitude, point.longitude]).addTo(markerLayer)
+                            .bindPopup('ID: ' + point.id + '<br>Alt: ' + point.altitude + ' km<br>Time: ' + point.timestamp);
+                    });
+
+                    // Add polyline (ISS path)
+                    L.polyline(data.data.map(p => [p.latitude, p.longitude]), {color: 'red', weight: 3}).addTo(polylineLayer);
+                    
+                    // Update data table
+                    const tableBody = document.querySelector('#dataTable tbody');
+                    tableBody.innerHTML = '';
+                    data.data.forEach(point => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${point.id}</td>
+                            <td>${point.latitude}</td>
+                            <td>${point.longitude}</td>
+                            <td>${point.altitude}</td>
+                            <td>${point.velocity}</td>
+                            <td>${point.timestamp}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                    
+                    // Limit chart data to last 100 entries for performance
+                    const chartData = data.data.slice(0, 100);
+                    console.log('Chart data length:', chartData.length);  // Debug chart data
+                    
+                    // Altitude Line Chart
+                    const timestamps = chartData.map(point => point.timestamp);
+                    const altitudes = chartData.map(point => point.altitude);
+                    const altitudeTrace = {
+                        x: timestamps,
+                        y: altitudes,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: 'Altitude (km)',
+                        line: { color: 'blue' }
+                    };
+                    const altitudeLayout = {
+                        title: 'ISS Altitude Over Time (Last 100 Points)',
+                        xaxis: { title: 'Time' },
+                        yaxis: { title: 'Altitude (km)' }
+                    };
+                    Plotly.newPlot('altitudeChart', [altitudeTrace], altitudeLayout);
+                    
+                    // Velocity Line Chart
+                    const velocities = chartData.map(point => point.velocity);
+                    const velocityTrace = {
+                        x: timestamps,
+                        y: velocities,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: 'Velocity (km/h)',
+                        line: { color: 'red' }
+                    };
+                    const velocityLayout = {
+                        title: 'ISS Velocity Over Time (Last 100 Points)',
+                        xaxis: { title: 'Time' },
+                        yaxis: { title: 'Velocity (km/h)' }
+                    };
+                    Plotly.newPlot('velocityChart', [velocityTrace], velocityLayout);
+                    
+                    console.log('Dashboard update complete.');  // Success log
+                })
+                .catch(error => {
+                    console.error('Error in updateDashboard:', error);  // Log fetch or JS errors
+                });
+        }
+        
+        // Initial load
+        updateDashboard();
+        
+        // Auto-update every 20 seconds
+        setInterval(updateDashboard, 20000);
+    </script>
+</body>
+</html>
