@@ -2,7 +2,7 @@ FROM php:8.1-apache
 
 RUN apt-get update && apt-get install -y r-base libmariadb-dev && docker-php-ext-install mysqli
 
-COPY COPY ./ /var/www/html/
+COPY  ./ /var/www/html/
 
 RUN R -e "install.packages(c('httr','jsonlite','dplyr','RMySQL'), repos='http://cran.r-project.org')"
 
