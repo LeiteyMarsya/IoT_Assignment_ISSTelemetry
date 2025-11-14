@@ -1,6 +1,6 @@
 # render.yaml for ISS Telemetry Project
 
-- services:
+services:
   - type: web
     name: iss-telemetry-web
     runtime: php
@@ -30,30 +30,30 @@
           property: password
 
   - type: worker
-  name: iss-telemetry-worker
-  runtime: docker
-  branch: main
-  dockerfilePath: ./Dockerfile_worker
-  plan: starter
-  envVars:
-    - key: DB_HOST
-      fromDatabase:
-        name: iss-telemetry-db
-        property: host
-    - key: DB_PORT
-      fromDatabase:
-        name: iss-telemetry-db
-        property: port
-    - key: DB_NAME
-      value: iss_telemetry
-    - key: DB_USER
-      fromDatabase:
-        name: iss-telemetry-db
-        property: user
-    - key: DB_PASSWORD
-      fromDatabase:
-        name: iss-telemetry-db
-        property: password
+    name: iss-telemetry-worker
+    runtime: docker
+    branch: main
+    dockerfilePath: ./Dockerfile_worker
+    plan: starter
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: iss-telemetry-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: iss-telemetry-db
+          property: port
+      - key: DB_NAME
+        value: iss_telemetry
+      - key: DB_USER
+        fromDatabase:
+          name: iss-telemetry-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: iss-telemetry-db
+          property: password
 
 databases:
   - name: iss-telemetry-db
