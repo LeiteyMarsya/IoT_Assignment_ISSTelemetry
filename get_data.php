@@ -1,75 +1,81 @@
 <?php
-// Enable error display temporarily for debugging; remove in production
+// Proper error logging (safe for production)
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 ini_set('error_log', '/tmp/php-error.log');
 error_reporting(E_ALL);
 
-// Set JSON content-type header
 header('Content-Type: application/json');
 
-// Connect to PostgreSQL database using environment variables
+// Render uses DATABASE_URL instead of separate DB_* variables
+$database_url = getenv("DATABASE_URL");
+
+if (!$database_url) {
+    http_response_code(500);
+    echo json_encode(["error" => "DATABASE_URL not set on server"]);
+    exit();
+}
+
+$parts = parse_url($database_url);
+
 $conn_string = sprintf(
-    "host=%s port=%s dbname=%s user=%s password=%s",
-    getenv('DB_HOST'),
-    getenv('DB_PORT'),
-    getenv('DB_NAME'),
-    getenv('DB_USER'),
-    getenv('DB_PASSWORD')
+    "host=%s port=%s dbname=%s user=%s password=%s sslmode=require",
+    $parts["host"],
+    $parts["port"],
+    ltrim($parts["path"], "/"),
+    $parts["user"],
+    $parts["pass"]
 );
 
 $conn = pg_connect($conn_string);
 
 if (!$conn) {
     http_response_code(500);
-    echo json_encode(['error' => 'Database connection failed']);
+    echo json_encode(["error" => "Database connection failed"]);
     exit();
 }
 
-// Query: latest analytics record
-$analytics_result = pg_query($conn, "SELECT * FROM iss_analytics ORDER BY id DESC LIMIT 1");
+// --- Fetch latest analytics record ---
+$analytics_query = "SELECT * FROM iss_analytics ORDER BY id DESC LIMIT 1";
+$analytics_result = pg_query($conn, $analytics_query);
+
 if (!$analytics_result) {
     http_response_code(500);
-    echo json_encode(['error' => 'Failed to query analytics']);
-    pg_close($conn);
+    echo json_encode(["error" => "Failed to query iss_analytics"]);
     exit();
 }
+
 $analytics = pg_fetch_assoc($analytics_result);
+
+// Convert numeric fields
 if ($analytics) {
     $analytics['altitude_changes'] = (int)$analytics['altitude_changes'];
     $analytics['altitude_change_magnitude'] = (float)$analytics['altitude_change_magnitude'];
     $analytics['max_longitude'] = (float)$analytics['max_longitude'];
     $analytics['min_longitude'] = (float)$analytics['min_longitude'];
-} else {
-    $analytics = null;
 }
 
-// Query: last 1000 entries from iss_data
-$data_result = pg_query($conn, "SELECT * FROM iss_data ORDER BY timestamp DESC LIMIT 1000");
+// --- Fetch last 1000 raw ISS data records ---
+$data_query = 'SELECT * FROM iss_data ORDER BY "timestamp" DESC LIMIT 1000';
+$data_result = pg_query($conn, $data_query);
+
 if (!$data_result) {
     http_response_code(500);
-    echo json_encode(['error' => 'Failed to query iss_data']);
-    pg_close($conn);
+    echo json_encode(["error" => "Failed to query iss_data"]);
     exit();
 }
+
 $data = [];
+
 while ($row = pg_fetch_assoc($data_result)) {
     $data[] = $row;
 }
 
-// Prepare response
-$response = [
-    'analytics' => $analytics,
-    'data' => $data
-];
-
-// Output response as JSON
-echo json_encode($response);
+// Return JSON
+echo json_encode([
+    "analytics" => $analytics,
+    "data" => $data
+]);
 
 pg_close($conn);
 ?>
-
-
-
-
-
