@@ -1,14 +1,21 @@
-# Use a base image with R installed
+# Use an official R base image
 FROM rocker/r-base:latest
 
-# Install required R packages (update to RPostgres for PostgreSQL)
+# Install system libraries needed
+RUN apt-get update && apt-get install -y \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    libxml2-dev \
+    libmariadb-dev \
+    libpq-dev
+
+# Install R packages
 RUN R -e "install.packages(c('httr', 'jsonlite', 'dplyr', 'RPostgres'), repos='http://cran.r-project.org')"
 
-# Copy your R script into the container
+# Copy your R script into container
 COPY iss_monitor.R /app/iss_monitor.R
 
-# Set working directory
 WORKDIR /app
 
-# Run the R script continuously
+# Run the R script
 CMD ["Rscript", "iss_monitor.R"]
