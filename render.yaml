@@ -4,7 +4,6 @@ services:
     env: docker
     branch: main
     buildCommand: ""
-    startCommand: "apache2-foreground"
     dockerfilePath: ./Dockerfile
     plan: free
     envVars:
