@@ -5,7 +5,6 @@ library(dplyr)
 # Load RPostgres instead of RMySQL
 library(RPostgres)
 
-# Connect to PostgreSQL using environment variables
 con <- dbConnect(RPostgres::Postgres(),
                  dbname = Sys.getenv("DB_NAME"),
                  host = Sys.getenv("DB_HOST"),
@@ -117,3 +116,4 @@ repeat {
 # Close connection
 
 dbDisconnect(con) 
+
