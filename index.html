@@ -57,106 +57,112 @@
         
         // Function to update dashboard
         function updateDashboard() {
-            console.log('Starting dashboard update...');  // Debug log
+            console.log('Starting dashboard update...');
+
             fetch('get_data.php')
             .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok: ' + response.status);
-        return response.json();
-          })
-          .then(data => {
-    // Normal dashboard update code
-          })
-          .catch(error => {
-        console.error('Error in updateDashboard:', error);
-      });
+                if (!response.ok) throw new Error('Network response was not ok: ' + response.status);
+                return response.json();
+            })
+            .then(data => {
+                // Ensure data shape is ok
+                if (!data || !Array.isArray(data.data)) {
+                    throw new Error('Invalid data structure received from server.');
+                }
 
-                    
-                    // Clear old map layers and polylines
-                    markerLayer.clearLayers();
-                    polylineLayer.clearLayers();
+                // Clear old map layers and polylines
+                markerLayer.clearLayers();
+                polylineLayer.clearLayers();
 
-                    // Update analytics safely
-                    if (data.analytics) {
-                        const maxLon = Number(data.analytics.max_longitude);
-                        const minLon = Number(data.analytics.min_longitude);
-                        const altChangeCount = data.analytics.altitude_changes;
-                        const altChangeMag = data.analytics.altitude_change_magnitude;
+                // Update analytics safely
+                if (data.analytics) {
+                    const maxLon = Number(data.analytics.max_longitude);
+                    const minLon = Number(data.analytics.min_longitude);
+                    const altChangeCount = data.analytics.altitude_changes;
+                    const altChangeMag = data.analytics.altitude_change_magnitude;
 
-                        document.getElementById('maxLon').textContent = !isNaN(maxLon) ? maxLon.toFixed(2) : '-';
-                        document.getElementById('minLon').textContent = !isNaN(minLon) ? minLon.toFixed(2) : '-';
-                        document.getElementById('altChanges').textContent = (typeof altChangeCount === 'number' && !isNaN(altChangeCount)) ? altChangeCount : 0;
-                        document.getElementById('altChangeMag').textContent = (typeof altChangeMag === 'number' && !isNaN(altChangeMag)) ? altChangeMag.toFixed(2) : '0.00';
-                    }
-        
-                    // Add markers and popups to the map
-                    data.data.forEach(point => {
+                    document.getElementById('maxLon').textContent = !isNaN(maxLon) ? maxLon.toFixed(2) : '-';
+                    document.getElementById('minLon').textContent = !isNaN(minLon) ? minLon.toFixed(2) : '-';
+                    document.getElementById('altChanges').textContent = (typeof altChangeCount === 'number' && !isNaN(altChangeCount)) ? altChangeCount : 0;
+                    document.getElementById('altChangeMag').textContent = (typeof altChangeMag === 'number' && !isNaN(altChangeMag)) ? altChangeMag.toFixed(2) : '0.00';
+                }
+
+                // Add markers and popups to the map
+                data.data.forEach(point => {
+                    if (typeof point.latitude === 'number' && typeof point.longitude === 'number') {
                         L.marker([point.latitude, point.longitude]).addTo(markerLayer)
                             .bindPopup('ID: ' + point.id + '<br>Alt: ' + point.altitude + ' km<br>Time: ' + point.timestamp);
-                    });
-
-                    // Add polyline (ISS path)
-                    L.polyline(data.data.map(p => [p.latitude, p.longitude]), {color: 'red', weight: 3}).addTo(polylineLayer);
-                    
-                    // Update data table
-                    const tableBody = document.querySelector('#dataTable tbody');
-                    tableBody.innerHTML = '';
-                    data.data.forEach(point => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${point.id}</td>
-                            <td>${point.latitude}</td>
-                            <td>${point.longitude}</td>
-                            <td>${point.altitude}</td>
-                            <td>${point.velocity}</td>
-                            <td>${point.timestamp}</td>
-                        `;
-                        tableBody.appendChild(row);
-                    });
-                    
-                    // Limit chart data to last 100 entries for performance
-                    const chartData = data.data.slice(0, 100);
-                    console.log('Chart data length:', chartData.length);  // Debug chart data
-                    
-                    // Altitude Line Chart
-                    const timestamps = chartData.map(point => point.timestamp);
-                    const altitudes = chartData.map(point => point.altitude);
-                    const altitudeTrace = {
-                        x: timestamps,
-                        y: altitudes,
-                        type: 'scatter',
-                        mode: 'lines',
-                        name: 'Altitude (km)',
-                        line: { color: 'blue' }
-                    };
-                    const altitudeLayout = {
-                        title: 'ISS Altitude Over Time (Last 100 Points)',
-                        xaxis: { title: 'Time' },
-                        yaxis: { title: 'Altitude (km)' }
-                    };
-                    Plotly.newPlot('altitudeChart', [altitudeTrace], altitudeLayout);
-                    
-                    // Velocity Line Chart
-                    const velocities = chartData.map(point => point.velocity);
-                    const velocityTrace = {
-                        x: timestamps,
-                        y: velocities,
-                        type: 'scatter',
-                        mode: 'lines',
-                        name: 'Velocity (km/h)',
-                        line: { color: 'red' }
-                    };
-                    const velocityLayout = {
-                        title: 'ISS Velocity Over Time (Last 100 Points)',
-                        xaxis: { title: 'Time' },
-                        yaxis: { title: 'Velocity (km/h)' }
-                    };
-                    Plotly.newPlot('velocityChart', [velocityTrace], velocityLayout);
-                    
-                    console.log('Dashboard update complete.');  // Success log
-                })
-                .catch(error => {
-                    console.error('Error in updateDashboard:', error);  // Log fetch or JS errors
+                    }
                 });
+
+                // Add polyline (ISS path)
+                var latlngs = data.data.map(p => [p.latitude, p.longitude]).filter(l => Array.isArray(l) && l.length === 2);
+                if (latlngs.length > 0) {
+                    L.polyline(latlngs, {color: 'red', weight: 3}).addTo(polylineLayer);
+                    // Optionally fit bounds to the path
+                    try { map.fitBounds(latlngs, {maxZoom: 5}); } catch (e) { /* ignore */ }
+                }
+                
+                // Update data table
+                const tableBody = document.querySelector('#dataTable tbody');
+                tableBody.innerHTML = '';
+                data.data.forEach(point => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${point.id}</td>
+                        <td>${point.latitude}</td>
+                        <td>${point.longitude}</td>
+                        <td>${point.altitude}</td>
+                        <td>${point.velocity}</td>
+                        <td>${point.timestamp}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+                
+                // Limit chart data to last 100 entries for performance
+                const chartData = data.data.slice(-100); // last 100 entries
+                console.log('Chart data length:', chartData.length);
+                
+                // Prepare timestamps safely
+                const timestamps = chartData.map(point => point.timestamp || '');
+                const altitudes = chartData.map(point => (typeof point.altitude === 'number' ? point.altitude : parseFloat(point.altitude) || 0));
+                const velocities = chartData.map(point => (typeof point.velocity === 'number' ? point.velocity : parseFloat(point.velocity) || 0));
+
+                // Altitude Line Chart
+                const altitudeTrace = {
+                    x: timestamps,
+                    y: altitudes,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'Altitude (km)'
+                };
+                const altitudeLayout = {
+                    title: 'ISS Altitude Over Time (Last 100 Points)',
+                    xaxis: { title: 'Time' },
+                    yaxis: { title: 'Altitude (km)' }
+                };
+                Plotly.newPlot('altitudeChart', [altitudeTrace], altitudeLayout);
+
+                // Velocity Line Chart
+                const velocityTrace = {
+                    x: timestamps,
+                    y: velocities,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'Velocity (km/h)'
+                };
+                const velocityLayout = {
+                    title: 'ISS Velocity Over Time (Last 100 Points)',
+                    xaxis: { title: 'Time' },
+                    yaxis: { title: 'Velocity (km/h)' }
+                };
+                Plotly.newPlot('velocityChart', [velocityTrace], velocityLayout);
+
+                console.log('Dashboard update complete.');
+            })
+            .catch(error => {
+                console.error('Error in updateDashboard:', error);
+            });
         }
         
         // Initial load
@@ -166,5 +172,4 @@
         setInterval(updateDashboard, 20000);
     </script>
 </body>
-
 </html>
