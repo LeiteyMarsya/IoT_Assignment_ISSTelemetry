@@ -1,6 +1,6 @@
 # render.yaml for ISS Telemetry Project
 
-services:
+- services:
   - type: web
     name: iss-telemetry-web
     runtime: php
