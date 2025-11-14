@@ -59,17 +59,17 @@
         function updateDashboard() {
             console.log('Starting dashboard update...');  // Debug log
             fetch('get_data.php')
-                .then(response => {
-                    console.log('Fetch response:', response);  // Check if fetch succeeds
-                    if (!response.ok) throw new Error('Network response was not ok: ' + response.status);
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('Parsed data:', data);  // Check data structure
-                    if (!data || !data.data) {
-                        console.error('No data received or data.data is empty');
-                        return;
-                    }
+            .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok: ' + response.status);
+        return response.json();
+          })
+          .then(data => {
+    // Normal dashboard update code
+          })
+          .catch(error => {
+        console.error('Error in updateDashboard:', error);
+      });
+
                     
                     // Clear old map layers and polylines
                     markerLayer.clearLayers();
@@ -166,4 +166,5 @@
         setInterval(updateDashboard, 20000);
     </script>
 </body>
+
 </html>
