@@ -8,7 +8,7 @@ CREATE TABLE iss_data (
 );
 
 CREATE TABLE iss_analytics (
-    id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+    id                          INTEGER PRIMARY KEY,
     period_start                TIMESTAMP NOT NULL,
     period_end                  TIMESTAMP NOT NULL,
     max_longitude               REAL,
