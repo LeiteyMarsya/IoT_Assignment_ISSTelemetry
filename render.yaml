@@ -1,0 +1,63 @@
+# render.yaml for ISS Telemetry Project
+
+services:
+  - type: web
+    name: iss-telemetry-web
+    env: php
+    branch: main
+    buildCommand: ""
+    startCommand: "php -S 0.0.0.0:10000 -t ./iss_dashboard"
+    dockerfilePath: ""
+    plan: free
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: iss-telemetry-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: iss-telemetry-db
+          property: port
+      - key: DB_NAME
+        value: iss_telemetry
+      - key: DB_USER
+        fromDatabase:
+          name: iss-telemetry-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: iss-telemetry-db
+          property: password
+
+  - type: worker
+    name: iss-telemetry-worker
+    env: docker
+    branch: main
+    dockerfilePath: ./Dockerfile_worker
+    plan: starter
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: iss-telemetry-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: iss-telemetry-db
+          property: port
+      - key: DB_NAME
+        value: iss_telemetry
+      - key: DB_USER
+        fromDatabase:
+          name: iss-telemetry-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: iss-telemetry-db
+          property: password
+
+databases:
+  - name: iss-telemetry-db
+    engine: postgres
+    version: 13
+    region: oregon
+    plan: free
