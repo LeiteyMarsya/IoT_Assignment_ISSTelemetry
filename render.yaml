@@ -1,13 +1,11 @@
-# render.yaml for ISS Telemetry Project
-
 services:
   - type: web
     name: iss-telemetry-web
-    runtime: php
+    env: docker
     branch: main
     buildCommand: ""
-    startCommand: "php -S 0.0.0.0:10000 -t ./iss_dashboard"
-    dockerfilePath: ""
+    startCommand: "apache2-foreground"
+    dockerfilePath: ./Dockerfile
     plan: free
     envVars:
       - key: DB_HOST
@@ -31,7 +29,7 @@ services:
 
   - type: worker
     name: iss-telemetry-worker
-    runtime: docker
+    env: docker
     branch: main
     dockerfilePath: ./Dockerfile_worker
     plan: starter
