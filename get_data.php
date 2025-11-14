@@ -26,19 +26,6 @@ if (!$conn) {
     exit();
 }
 
-fetch('get_data.php')
-    .then(response => response.text())  // Get raw text first
-    .then(text => {
-        console.log('Raw response text:', text);  // Log raw response for inspection
-        return JSON.parse(text);  // Parse JSON after inspection
-    })
-    .then(data => {
-        // your existing code to handle data
-    })
-    .catch(error => {
-        console.error('Error parsing JSON:', error);
-    });
-
 // Query: latest analytics record
 $analytics_result = pg_query($conn, "SELECT * FROM iss_analytics ORDER BY id DESC LIMIT 1");
 if (!$analytics_result) {
@@ -81,6 +68,7 @@ echo json_encode($response);
 
 pg_close($conn);
 ?>
+
 
 
 
