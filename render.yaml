@@ -57,7 +57,5 @@ services:
 
 databases:
   - name: iss-telemetry-db
-    engine: postgres
-    version: 14
     plan: free
     region: oregon
