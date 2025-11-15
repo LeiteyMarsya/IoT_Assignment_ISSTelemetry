@@ -24,11 +24,12 @@ $database_url = getenv("DATABASE_URL");
 
 if (!$database_url) {
     http_response_code(500);
-    echo json_encode(["error" => "DATABASE_URL not set on server"]);
+    echo json_encode(["error" => "DATABASE_URL not set"]);
     exit();
 }
 
-$parts = parse_url($database_url);
+$fixed_url = str_replace("postgresql://", "http://", $database_url);
+$parts = parse_url($fixed_url);
 
 $conn_string = sprintf(
     "host=%s port=%s dbname=%s user=%s password=%s sslmode=require",
@@ -38,6 +39,8 @@ $conn_string = sprintf(
     $parts["user"],
     $parts["pass"]
 );
+
+error_log("CONNECTION STRING = " . $conn_string);
 
 $conn = pg_connect($conn_string);
 
@@ -91,6 +94,7 @@ echo json_encode([
 
 pg_close($conn);
 ?>
+
 
 
 
