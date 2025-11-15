@@ -1,6 +1,16 @@
 <?php
 // Proper error logging (safe for production)
-error_log("CONNECTION STRING = " . $conn_string);
+$conn_string = sprintf(
+    "host=%s port=%s dbname=%s user=%s password=%s sslmode=require",
+    $parts["host"],
+    $parts["port"],
+    ltrim($parts["path"], "/"),
+    $parts["user"],
+    $parts["pass"]
+);
+
+error_log("CONNECTION STRING = " . $conn_string);  // <-- NOW SAFE
+
 error_log("DATABASE_URL = " . getenv("DATABASE_URL"));
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
@@ -81,6 +91,7 @@ echo json_encode([
 
 pg_close($conn);
 ?>
+
 
 
 
