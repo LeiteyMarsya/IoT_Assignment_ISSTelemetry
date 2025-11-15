@@ -8,7 +8,7 @@ error_reporting(E_ALL);
 header('Content-Type: application/json');
 
 // Render uses DATABASE_URL instead of separate DB_* variables
-$database_url = getenv("DATABASE_URL");
+$database_url = getenv("EXTERNAL_DATABASE_URL");
 
 if (!$database_url) {
     http_response_code(500);
@@ -79,3 +79,4 @@ echo json_encode([
 
 pg_close($conn);
 ?>
+
