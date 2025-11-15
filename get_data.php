@@ -23,14 +23,10 @@ header('Content-Type: application/json');
 // Render uses DATABASE_URL instead of separate DB_* variables
 $database_url = getenv("DATABASE_URL");
 
-if (!$database_url) {
-    http_response_code(500);
-    echo json_encode(["error" => "DATABASE_URL not set"]);
-    exit();
-}
+// Convert postgresql:// to postgres:// (parse_url cannot parse postgresql://)
+$database_url = str_replace("postgresql://", "postgres://", $database_url);
 
-$fixed_url = str_replace("postgresql://", "http://", $database_url);
-$parts = parse_url($fixed_url);
+$parts = parse_url($database_url);
 
 $conn_string = sprintf(
     "host=%s port=%s dbname=%s user=%s password=%s sslmode=require",
@@ -95,6 +91,7 @@ echo json_encode([
 
 pg_close($conn);
 ?>
+
 
 
 
