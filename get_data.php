@@ -1,108 +1,71 @@
 <?php
-// Proper error logging (safe for production)
-var_dump(getenv("DATABASE_URL"));
-$conn_string = sprintf(
-    "host=%s port=%s dbname=%s user=%s password=%s sslmode=require",
-    $parts["host"],
-    $parts["port"],
-    ltrim($parts["path"], "/"),
-    $parts["user"],
-    $parts["pass"]
-);
-
-error_log("CONNECTION STRING = " . $conn_string);  // <-- NOW SAFE
-
-error_log("DATABASE_URL = " . getenv("DATABASE_URL"));
-ini_set('display_errors', 0);
+ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 ini_set('error_log', '/tmp/php-error.log');
 error_reporting(E_ALL);
 
 header('Content-Type: application/json');
 
-// Render uses DATABASE_URL instead of separate DB_* variables
+// 1. Get environment variable
 $database_url = getenv("DATABASE_URL");
-var_dump($database_url);
 
 if (!$database_url) {
     http_response_code(500);
-    echo json_encode(["error" => "Environment variable DATABASE_URL not found"]);
+    echo json_encode(["error" => "DATABASE_URL not set"]);
     exit;
 }
 
-// Convert postgresql:// to postgres:// (parse_url cannot parse postgresql://)
+// 2. Convert postgresql:// → postgres://
 $database_url = str_replace("postgresql://", "postgres://", $database_url);
 
-// Parse URL
+// 3. Parse URL
 $parts = parse_url($database_url);
 if (!$parts) {
-    die("Invalid DATABASE_URL format");
+    http_response_code(500);
+    echo json_encode(["error" => "Invalid DATABASE_URL format"]);
+    exit;
 }
 
-// Extract components
-$host = $parts['host'];
-$port = $parts['port'];
-$user = $parts['user'];
-$pass = $parts['pass'];
-$db   = ltrim($parts['path'], '/');
+// 4. Extract components
+$host = $parts['host'] ?? null;
+$port = $parts['port'] ?? 5432;
+$user = $parts['user'] ?? null;
+$pass = $parts['pass'] ?? null;
+$db   = ltrim($parts['path'] ?? '', '/');
 
-// Build connection string
+if (!$host || !$user || !$db) {
+    http_response_code(500);
+    echo json_encode(["error" => "DATABASE_URL missing required components"]);
+    exit;
+}
+
+// 5. Build connection string
 $conn_string = sprintf(
     "host=%s port=%s dbname=%s user=%s password=%s sslmode=require",
-    $host,
-    $port,
-    $db,
-    $user,
-    $pass
+    $host, $port, $db, $user, $pass
 );
 
-error_log("CONNECTION STRING = " . $conn_string);
-
+// 6. Connect
 $conn = pg_connect($conn_string);
-
 if (!$conn) {
     http_response_code(500);
     echo json_encode(["error" => "Database connection failed"]);
-    exit();
+    exit;
 }
 
-// --- Fetch latest analytics record ---
-$analytics_query = "SELECT * FROM iss_analytics ORDER BY id DESC LIMIT 1";
-$analytics_result = pg_query($conn, $analytics_query);
-
-if (!$analytics_result) {
-    http_response_code(500);
-    echo json_encode(["error" => "Failed to query iss_analytics"]);
-    exit();
-}
-
+// 7. Fetch analytics
+$analytics_result = pg_query($conn, "SELECT * FROM iss_analytics ORDER BY id DESC LIMIT 1");
 $analytics = pg_fetch_assoc($analytics_result);
 
-// Convert numeric fields
-if ($analytics) {
-    $analytics['altitude_changes'] = (int)$analytics['altitude_changes'];
-    $analytics['altitude_change_magnitude'] = (float)$analytics['altitude_change_magnitude'];
-    $analytics['max_longitude'] = (float)$analytics['max_longitude'];
-    $analytics['min_longitude'] = (float)$analytics['min_longitude'];
-}
-
-// --- Fetch last 1000 raw ISS data records ---
-$data_query = 'SELECT * FROM iss_data ORDER BY "timestamp" DESC LIMIT 1000';
-$data_result = pg_query($conn, $data_query);
-
-if (!$data_result) {
-    http_response_code(500);
-    echo json_encode(["error" => "Failed to query iss_data"]);
-    exit();
-}
-
+// 8. Fetch data
+$data_result = pg_query($conn, 'SELECT * FROM iss_data ORDER BY "timestamp" DESC LIMIT 1000');
 $data = [];
 
 while ($row = pg_fetch_assoc($data_result)) {
     $data[] = $row;
 }
 
-// Return JSON
+// 9. Return JSON
 echo json_encode([
     "analytics" => $analytics,
     "data" => $data
@@ -110,12 +73,3 @@ echo json_encode([
 
 pg_close($conn);
 ?>
-
-
-
-
-
-
-
-
-
