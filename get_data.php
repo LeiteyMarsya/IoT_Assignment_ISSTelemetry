@@ -1,5 +1,6 @@
 <?php
 // Proper error logging (safe for production)
+error_log("DATABASE_URL = " . getenv("DATABASE_URL"));
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 ini_set('error_log', '/tmp/php-error.log');
@@ -79,5 +80,6 @@ echo json_encode([
 
 pg_close($conn);
 ?>
+
 
 
