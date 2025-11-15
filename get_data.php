@@ -1,5 +1,6 @@
 <?php
 // Proper error logging (safe for production)
+var_dump(getenv("DATABASE_URL"));
 $conn_string = sprintf(
     "host=%s port=%s dbname=%s user=%s password=%s sslmode=require",
     $parts["host"],
@@ -94,6 +95,7 @@ echo json_encode([
 
 pg_close($conn);
 ?>
+
 
 
 
