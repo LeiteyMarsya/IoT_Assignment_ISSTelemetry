@@ -22,19 +22,38 @@ header('Content-Type: application/json');
 
 // Render uses DATABASE_URL instead of separate DB_* variables
 $database_url = getenv("DATABASE_URL");
+var_dump($database_url);
+
+if (!$database_url) {
+    http_response_code(500);
+    echo json_encode(["error" => "Environment variable DATABASE_URL not found"]);
+    exit;
+}
 
 // Convert postgresql:// to postgres:// (parse_url cannot parse postgresql://)
 $database_url = str_replace("postgresql://", "postgres://", $database_url);
 
+// Parse URL
 $parts = parse_url($database_url);
+if (!$parts) {
+    die("Invalid DATABASE_URL format");
+}
 
+// Extract components
+$host = $parts['host'];
+$port = $parts['port'];
+$user = $parts['user'];
+$pass = $parts['pass'];
+$db   = ltrim($parts['path'], '/');
+
+// Build connection string
 $conn_string = sprintf(
     "host=%s port=%s dbname=%s user=%s password=%s sslmode=require",
-    $parts["host"],
-    $parts["port"],
-    ltrim($parts["path"], "/"),
-    $parts["user"],
-    $parts["pass"]
+    $host,
+    $port,
+    $db,
+    $user,
+    $pass
 );
 
 error_log("CONNECTION STRING = " . $conn_string);
@@ -91,6 +110,7 @@ echo json_encode([
 
 pg_close($conn);
 ?>
+
 
 
 
