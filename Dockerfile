@@ -1,9 +1,16 @@
 FROM php:8.1-apache
 
-RUN apt-get update && apt-get install -y r-base libmariadb-dev && docker-php-ext-install mysqli
+# Install PostgreSQL dependencies + MySQL + R base
+RUN apt-get update && apt-get install -y \
+    r-base \
+    libpq-dev \
+    libmariadb-dev \
+    && docker-php-ext-install mysqli pgsql pdo_pgsql
 
-COPY  ./ /var/www/html/
+# Copy website files
+COPY ./ /var/www/html/
 
+# Install R packages
 RUN R -e "install.packages(c('httr','jsonlite','dplyr','RMySQL'), repos='http://cran.r-project.org')"
 
 EXPOSE 80
